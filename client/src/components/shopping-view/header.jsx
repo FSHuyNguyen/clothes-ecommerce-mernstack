@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { HousePlug, LogOut, Menu, ShoppingCart, UserCog } from 'lucide-react';
 import {
     Sheet,
@@ -21,37 +21,36 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { logoutUser } from "../../store/auth-slice";
+import UserCartWrapper from "./cart-wrapper";
+import { useEffect, useState } from "react";
+import { getCartItems } from "../../store/shop/cart-slice";
 
 function MenuItems() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    function handleNavigate(path) {
-        const url = new URL(path, window.location.origin);
-        const queryParams = new URLSearchParams(url.search);
-    
-        let filters = {};
-    
-        for (const [key, value] of queryParams.entries()) {
-            if (filters[key]) {
-                if (Array.isArray(filters[key])) {
-                    filters[key].push(value);
-                } else {
-                    filters[key] = [filters[key], value];
-                }
-            } else {
-                filters[key] = [value];
-            }
-        }
-        sessionStorage.setItem('filters', JSON.stringify(filters));
+    function handleNavigate(getCurrentMenuItem) {
+        sessionStorage.removeItem('filters');
+
+        const currentFilter = getCurrentMenuItem.id !== 'home' 
+        && getCurrentMenuItem.id !== 'products'
+        && getCurrentMenuItem.id !== 'search'
+            ? {
+                category: [getCurrentMenuItem.id]
+            } : null;
+
+        sessionStorage.setItem('filters', currentFilter !== null ? JSON.stringify(currentFilter) : JSON.stringify({}));
         
-        const newUrl = `${url.pathname}?${queryParams.toString()}`;
-        navigate(newUrl);
+        location.pathname.includes('listing') && currentFilter !== null
+            ? setSearchParams(new URLSearchParams(`?category=${getCurrentMenuItem.id}`))
+            : navigate(getCurrentMenuItem.path);
     }
-    
+
     return <nav className="flex flex-col mb-3 lg:mb-0 lg:items-center gap-6 lg:flex-row">
         {
             shoppingViewHeaderMenuItems.map((menuItem) =>
-                <div className="text-sm font-medium cursor-pointer" onClick={() => handleNavigate(menuItem.path)} key={menuItem.id}>
+                <div className="text-sm font-medium cursor-pointer" onClick={() => handleNavigate(menuItem)} key={menuItem.id}>
                     {menuItem.label}
                 </div>)
         }
@@ -61,6 +60,8 @@ function MenuItems() {
 function HeaderRightContent() {
 
     const { user } = useSelector(state => state.auth);
+    const { cartItems } = useSelector(state => state.shoppingCart);
+    const [openCartSheet, setOpenCartSheet] = useState(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
@@ -69,11 +70,22 @@ function HeaderRightContent() {
         dispatch(logoutUser());
     }
 
+    useEffect(() => {
+        dispatch(getCartItems(user.id));
+    }, [dispatch])
+
     return <div className="flex lg:items-center lg:flex-row flex-col gap-4">
-        <Button variant='outline' size='icon'>
-            <ShoppingCart className="w-6 h-6" />
-            <span className="sr-only">User cart</span>
-        </Button>
+        <Sheet open={openCartSheet} onOpenChange={() => setOpenCartSheet(false)}>
+            <Button onClick={() => setOpenCartSheet(true)} variant='outline' size='icon' className="relative">
+                <ShoppingCart className="w-6 h-6" />
+                <span className="absolute top-[-12px] right-[-12px] font-bold text-sm bg-red-500 rounded-full py-0.5 px-1.5 text-white">{cartItems?.items?.length || 0}</span>
+                <span className="sr-only">User cart</span>
+            </Button>
+            <UserCartWrapper
+                cartItems={cartItems && cartItems.items && cartItems.items.length > 0 ? cartItems.items : []}
+                setOpenCartSheet={setOpenCartSheet}
+            />
+        </Sheet>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Avatar className="bg-black">
@@ -122,7 +134,7 @@ function ShoppingHeader() {
                         <SheetDescription>
 
                         </SheetDescription>
-                    </SheetHeader> 
+                    </SheetHeader>
 
                     <MenuItems />
                     <HeaderRightContent />

@@ -15,6 +15,9 @@ import { getListFilteredProducts, getProductDetail } from "../../store/shop/prod
 import ShoppingProductCard from "../../components/shopping-view/product-card";
 import { useSearchParams } from "react-router-dom";
 import ProductDetail from "../../components/shopping-view/product-detail";
+import { addToCart, getCartItems } from "../../store/shop/cart-slice";
+import { useToast } from "../../hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function createSearchParamsHelper(filterParams) {
     const queryParams = [];
@@ -33,11 +36,16 @@ function createSearchParamsHelper(filterParams) {
 function ShoppingListing() {
 
     const dispatch = useDispatch();
-    const { productList, productDetail } = useSelector(state => state.shoppingProducts);
+    const { productList, productDetail, isLoading } = useSelector(state => state.shoppingProducts);
+    const { cartItems } = useSelector(state => state.shoppingCart);
+    const { user } = useSelector(state => state.auth);
     const [filters, setFilters] = useState({});
     const [sort, setSort] = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
     const [openDetailDialog, setOpenDetailDialog] = useState(false);
+    const { toast } = useToast();
+
+    const categorySearchParam = searchParams.get('category');
 
     function handleFilter(getSectionId, getCurrentOption) {
         let cpyFilters = { ...filters };
@@ -62,10 +70,46 @@ function ShoppingListing() {
         sessionStorage.setItem('filters', JSON.stringify(cpyFilters));
     }
 
+    function handleSort(value) {
+        setSort(value);
+    }
+
+    function handleGetProductDetail(id) {
+        dispatch(getProductDetail(id));
+    }
+
+    function handleAddToCart(productId, productTotalStock) {
+        let currentCartItems = cartItems.items || [];
+
+        if (currentCartItems.length) {
+            const indexofCurrentItem = currentCartItems.findIndex(item => item.productId === productId);
+            if (indexofCurrentItem !== -1) {
+                const getQuantity = currentCartItems[indexofCurrentItem].quantity;
+                if (getQuantity + 1 > productTotalStock) {
+                    toast({
+                        title: `Only ${getQuantity} quantity can be added for this item`,
+                        variant: 'destructive'
+                    })
+
+                    return;
+                }
+            }
+        }
+
+        dispatch(addToCart({ userId: user.id, productId, quantity: 1 })).then(data => {
+            if (data.payload.success) {
+                dispatch(getCartItems(user.id));
+                toast({
+                    title: 'Product is added to cart'
+                })
+            }
+        });
+    }
+
     useEffect(() => {
         setSort('price-lowtohigh');
         setFilters(JSON.parse(sessionStorage.getItem('filters')) || {});
-    }, [])
+    }, [categorySearchParam])
 
     useEffect(() => {
         const savedFilters = sessionStorage.getItem('filters');
@@ -92,14 +136,6 @@ function ShoppingListing() {
     useEffect(() => {
         if (productDetail !== null) setOpenDetailDialog(true);
     }, [productDetail])
-
-    function handleSort(value) {
-        setSort(value);
-    }
-
-    function handleGetProductDetail(id) {
-        dispatch(getProductDetail(id));
-    }
 
     return (<div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6 p-4 md:p-6">
         <ProductFilter filters={filters} setFilters={setFilters} handleFilter={handleFilter} />
@@ -130,19 +166,32 @@ function ShoppingListing() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 -4">
                 {
-                    productList && productList.length > 0
-                        ?
-                        productList.map(productItem =>
-                            <ShoppingProductCard handleGetProductDetail={handleGetProductDetail} key={productItem._id} product={productItem} />
-                        )
-                        : null
+                    isLoading
+                        ? <>
+                            <Skeleton className="h-[486px] w-[358px]" />
+                            <Skeleton className="h-[486px] w-[358px]" />
+                            <Skeleton className="h-[486px] w-[358px]" />
+                            <Skeleton className="h-[486px] w-[358px]" />
+                        </>
+
+                        : productList && productList.length > 0
+                            ?
+                            productList.map(productItem =>
+                                <ShoppingProductCard
+                                    handleGetProductDetail={handleGetProductDetail}
+                                    key={productItem._id}
+                                    product={productItem}
+                                    handleAddToCart={handleAddToCart}
+                                />
+                            )
+                            : null
                 }
             </div>
         </div>
-        {productDetail !== null && 
-        <ProductDetail open={openDetailDialog} setOpen={setOpenDetailDialog} productDetail={productDetail} />
+        {productDetail !== null &&
+            <ProductDetail open={openDetailDialog} setOpen={setOpenDetailDialog} productDetail={productDetail} />
         }
-        
+
     </div>);
 }
 

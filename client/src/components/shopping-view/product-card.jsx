@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardFooter } from "../ui/card";
 import { Badge } from "@/components/ui/badge";
 
-function ShoppingProductCard({ handleGetProductDetail, product }) {
+function ShoppingProductCard({ handleGetProductDetail, product, handleAddToCart }) {
 
     return (
         <Card className="w-full max-w-sm mx-auto">
@@ -11,9 +11,14 @@ function ShoppingProductCard({ handleGetProductDetail, product }) {
                 <div className="relative">
                     <img src={product.image} alt={product.title} className="w-full h-[300px] object-cover rounded-t-lg" />
                     {
-                        product?.salePrice > 0
-                            ? <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-600">Sale</Badge> : null
+                        product?.totalStock === 0
+                            ? <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-600">Out Of Stock</Badge>
+                            : product?.totalStock < 10
+                                ? <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-600">{`Only ${product?.totalStock} item left`}</Badge>
+                                : product?.salePrice > 0
+                                    ? <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-600">Sale</Badge> : null
                     }
+
                 </div>
                 <CardContent className="p-4">
                     <h2 className="text-xl font-bold mb-2">{product.title}</h2>
@@ -37,10 +42,15 @@ function ShoppingProductCard({ handleGetProductDetail, product }) {
 
                     </div>
                 </CardContent>
-                <CardFooter>
-                    <Button className="w-full">Add to cart</Button>
-                </CardFooter>
             </div>
+            <CardFooter>
+                {
+                    product?.totalStock === 0
+                        ? <Button className="w-full opacity-60 cursor-not-allowed">Out Of Stock</Button>
+                        : <Button className="w-full" onClick={() => handleAddToCart(product._id,product?.totalStock)}>Add to cart</Button>
+                }
+
+            </CardFooter>
         </Card>
     );
 }

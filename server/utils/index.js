@@ -2,8 +2,15 @@ const _ = require("lodash");
 
 const User = require("../models/User");
 
-const getFiledInfoData = ({ listFiled = [], object = {} }) => {
-  return _.pick(object, listFiled);
+const getFiledInfoData = ({ listFiled = [], object = {} }, isConvertId = false) => {
+  const data = _.pick(object, listFiled);
+  
+  if (isConvertId&& data._id) {
+    data.id = data._id;
+    delete data._id;
+  }
+  
+  return data;
 };
 
 const removeFiledInfoData = ({ listFiled = [], object = {} }) => {

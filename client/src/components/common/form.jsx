@@ -16,7 +16,14 @@ const types = {
     TEXTAREA: 'textarea',
 }
 
-function CommonForm({ formControls, formData, setFormData, onSubmit, buttonText, isBtnDisabled }) {
+function CommonForm({
+    formControls,
+    formData,
+    setFormData,
+    onSubmit,
+    buttonText,
+    isBtnDisabled
+}) {
 
     function renderInputsByComponentType(getControlItem) {
         let element = null;
@@ -24,26 +31,46 @@ function CommonForm({ formControls, formData, setFormData, onSubmit, buttonText,
 
         switch (getControlItem.componentType) {
             case types.INPUT:
-                element = <Input
-                    name={getControlItem.name}
-                    placeholder={getControlItem.placeholder}
-                    id={getControlItem.name}
-                    type={getControlItem.type}
-                    value={value}
-                    onChange={event => setFormData({
-                        ...formData,
-                        [getControlItem.name]: event.target.value
-                    })}
-                />
+                element = getControlItem.type === 'checkbox' ?
+                    <Input
+                        className={getControlItem.className ? getControlItem.className : ''}
+                        name={getControlItem.name}
+                        placeholder={getControlItem.placeholder}
+                        id={getControlItem.name}
+                        type={getControlItem.type}
+                        checked={formData[getControlItem.name]}
+                        value={value}
+                        onChange={event => {
+                            setFormData({
+                                ...formData,
+                                [getControlItem.name]: event.target.checked
+                            })
+                        }}
+                    />
+                    :
+                    <Input
+                        className={getControlItem.className ? getControlItem.className : ''}
+                        name={getControlItem.name}
+                        placeholder={getControlItem.placeholder}
+                        id={getControlItem.name}
+                        type={getControlItem.type}
+                        value={value}
+                        onChange={event => {
+                            setFormData({
+                                ...formData,
+                                [getControlItem.name]: event.target.value 
+                            })
+                        }}
+                    />
                 break;
             case types.SELECT:
                 element = (
-                    <Select 
-                    onValueChange={(value) => setFormData({
-                        ...formData,
-                        [getControlItem.name]: value
-                    })} 
-                    value={value}
+                    <Select
+                        onValueChange={(value) => setFormData({
+                            ...formData,
+                            [getControlItem.name]: value
+                        })}
+                        value={value}
                     >
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder={getControlItem.placeholder} />
@@ -82,7 +109,7 @@ function CommonForm({ formControls, formData, setFormData, onSubmit, buttonText,
                         ...formData,
                         [getControlItem.name]: event.target.value
                     })}
-s                />
+                    s />
                 break;
         }
 

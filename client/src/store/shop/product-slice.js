@@ -26,7 +26,6 @@ export const getListFilteredProducts = createAsyncThunk(
 export const getProductDetail = createAsyncThunk(
   "/adminProducts/getproductdetail",
   async (id) => {
-
     const response = await axios.get(
       `${import.meta.env.VITE_API_NODEJS_PORT}/shop/products/get/${id}`
     );
@@ -38,7 +37,11 @@ export const getProductDetail = createAsyncThunk(
 const shopProductSlice = createSlice({
   name: "shoppingProducts",
   initialState,
-  reducers: {},
+  reducers: {
+    setProductDetails: (state) => {
+      state.productDetail = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getListFilteredProducts.pending, (state) => {
@@ -66,4 +69,5 @@ const shopProductSlice = createSlice({
   },
 });
 
+export const { setProductDetails } = shopProductSlice.actions;
 export default shopProductSlice.reducer;
